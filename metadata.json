@@ -1,0 +1,5 @@
+{
+  "name": "Genius Prioritizer AI",
+  "description": "An AI-powered assistant to help you identify your most important tasks and achieve clarity on what to focus on next. Uses Gemini to analyze your tasks and suggest the top priority.",
+  "requestFramePermissions": []
+}
