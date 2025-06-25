@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { Task } from './types';
 import { GENAI_MODEL_NAME } from './constants';
 import { Header } from './components/Header';
+import { UserContextInput } from './components/UserContextInput'; // New Import
 import { TaskInput } from './components/TaskInput';
 import { TaskList } from './components/TaskList';
 import { AIPrioritizer } from './components/AIPrioritizer';
@@ -13,6 +14,7 @@ import { prioritizeTasksWithGemini } from './services/geminiService';
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [userContext, setUserContext] = useState<string>(''); // New state for user context
   const [aiSuggestion, setAiSuggestion] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,10 @@ const App: React.FC = () => {
     );
   }, []);
 
+  const handleUserContextChange = useCallback((context: string) => {
+    setUserContext(context);
+  }, []);
+
   const handlePrioritize = useCallback(async () => {
     if (tasks.length === 0) {
       setError("Please add some tasks before trying to prioritize.");
@@ -44,7 +50,8 @@ const App: React.FC = () => {
     setError(null);
     setAiSuggestion('');
     try {
-      const suggestion = await prioritizeTasksWithGemini(tasks, GENAI_MODEL_NAME);
+      // Pass userContext to the service
+      const suggestion = await prioritizeTasksWithGemini(tasks, userContext, GENAI_MODEL_NAME);
       setAiSuggestion(suggestion);
     } catch (err) {
       console.error("Error prioritizing tasks:", err);
@@ -52,7 +59,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [tasks]);
+  }, [tasks, userContext]); // Add userContext to dependencies
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 text-slate-100 flex flex-col items-center justify-between p-4 selection:bg-sky-500 selection:text-white">
@@ -60,6 +67,7 @@ const App: React.FC = () => {
         <Header />
         
         <main className="space-y-6 bg-slate-800 bg-opacity-70 backdrop-blur-md shadow-2xl rounded-xl p-6 md:p-8">
+          <UserContextInput value={userContext} onChange={handleUserContextChange} />
           <TaskInput onAddTask={addTask} />
           
           {tasks.length > 0 && (
@@ -85,4 +93,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-    

@@ -8,23 +8,34 @@ if (!API_KEY) {
   console.error("API_KEY environment variable not set. Gemini API calls will fail.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! }); // Non-null assertion as we check above and error, but still risky if not set at build/runtime
+const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
-export const prioritizeTasksWithGemini = async (tasks: Task[], modelName: string): Promise<string> => {
+export const prioritizeTasksWithGemini = async (tasks: Task[], userContext: string, modelName: string): Promise<string> => {
   if (!API_KEY) {
     throw new Error("Gemini API key is not configured. Please set the API_KEY environment variable.");
   }
 
   const taskListString = tasks.map(task => `- ${task.text.trim()}`).join('\n');
 
+  const contextPromptSection = userContext.trim() 
+    ? `
+The user has provided the following personal context to help define what 'genius' or 'high impact' means to them:
+--- USER CONTEXT ---
+${userContext.trim()}
+--- END USER CONTEXT ---
+Please consider this context deeply when making your recommendation and frame your reasoning in light of it.`
+    : "The user has not provided specific personal context. Use general principles of impact and potential.";
+
   const prompt = `
 You are 'Clarity Engine', an advanced AI prioritization assistant. Your purpose is to help users identify the single most impactful task or idea from the list they provide, guiding them toward what truly matters for achieving their goals, even if those goals are unstated. You should sound insightful, slightly philosophical, and highly intelligent.
+
+${contextPromptSection}
 
 Analyze the following tasks/ideas carefully:
 ${taskListString}
 
-Based on this list, which ONE item should be the absolute top priority right now? Provide a concise, inspiring explanation for your choice. Your response should start directly with your recommendation. For example: "Your top priority should be: [Task X] because [reasoning]."
-Focus on identifying the task that could unlock the most potential, create the most significant positive change, or clear a critical bottleneck.
+Based on this list ${userContext.trim() ? 'and the user\'s personal context, ' : ''}which ONE item should be the absolute top priority right now? Provide a concise, inspiring explanation for your choice. Your response should start directly with your recommendation. For example: "Your top priority should be: [Task X] because [reasoning]."
+Focus on identifying the task that could unlock the most potential, create the most significant positive change, or clear a critical bottleneck, aligning with the user's broader aspirations (if provided).
   `;
 
   try {
@@ -32,10 +43,10 @@ Focus on identifying the task that could unlock the most potential, create the m
       model: modelName,
       contents: prompt,
       config: {
-        temperature: 0.7, // Slightly creative but still focused
+        temperature: 0.75, // Slightly more creative if context is given
         topP: 0.9,
         topK: 40,
-        // Omit thinkingConfig to use default (enabled) for higher quality for this model.
+        // Omit thinkingConfig to use default (enabled) for higher quality.
       }
     });
     
@@ -53,4 +64,3 @@ Focus on identifying the task that could unlock the most potential, create the m
     throw new Error(`Failed to get prioritization from AI: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
-    
